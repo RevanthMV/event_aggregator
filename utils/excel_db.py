@@ -388,6 +388,52 @@ class ExcelUserDatabase:
             print(f"✅ {reminder_count} 24-hour reminder(s) sent successfully.")
         except Exception as e:
             print(f"⚠️ Error in schedule_24hr_reminders: {e}")
+    # ---------------- FEEDBACK SYSTEM ----------------
+    def submit_feedback(self, event_id, user_email, user_name, feedback_text, rating):
+        """Save student feedback for an event."""
+        import pandas as pd
+        import uuid
+        from datetime import datetime
+
+        try:
+            feedback_file = os.path.join(self.project_root, "event_feedbacks.xlsx")
+            feedback_sheet = "Feedbacks"
+
+            # Load or create feedback sheet
+            if os.path.exists(feedback_file):
+                df = pd.read_excel(feedback_file, sheet_name=feedback_sheet)
+            else:
+                df = pd.DataFrame(columns=[
+                    "Feedback_ID", "Event_ID", "Event_Title",
+                    "User_Email", "User_Name", "Feedback", "Rating", "Date"
+                ])
+
+            # Get event title
+            events_df = pd.read_excel(self.events_file, sheet_name=self.events_sheet)
+            event_row = events_df[events_df["Event_ID"] == event_id]
+            event_title = event_row.iloc[0]["Title"] if not event_row.empty else "Unknown"
+
+            # Create new feedback
+            new_row = {
+                "Feedback_ID": str(uuid.uuid4())[:8].upper(),
+                "Event_ID": event_id,
+                "Event_Title": event_title,
+                "User_Email": user_email,
+                "User_Name": user_name,
+                "Feedback": feedback_text,
+                "Rating": rating,
+                "Date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            with pd.ExcelWriter(feedback_file, engine="openpyxl") as writer:
+                df.to_excel(writer, sheet_name=feedback_sheet, index=False)
+
+            print(f"✅ Feedback saved for {event_title} by {user_name}")
+            return True, "Feedback submitted successfully"
+        except Exception as e:
+            return False, f"❌ Feedback submission failed: {e}"
+
 
 
     # ---------------- Poster ----------------

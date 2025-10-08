@@ -1,3 +1,4 @@
+# screens/student_dashboard.py
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
@@ -9,7 +10,9 @@ from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.dialog import MDDialog
 from kivy.app import App
 from widgets.event_card import EventCard
+from kivy.metrics import dp
 import pandas as pd
+import os
 
 
 class Dashboard(MDScreen):
@@ -17,6 +20,7 @@ class Dashboard(MDScreen):
         super().__init__(**kwargs)
         self.dialog = None
         self.events = []
+        self.events_container = None
 
     def on_enter(self):
         self.clear_widgets()
@@ -32,7 +36,7 @@ class Dashboard(MDScreen):
         # Main layout
         main_layout = MDBoxLayout(orientation="vertical")
 
-        # Top toolbar
+        # Toolbar
         toolbar = MDTopAppBar(
             title=f"👋 Welcome, {user.name.split()[0]}!",
             right_action_items=[
@@ -43,39 +47,33 @@ class Dashboard(MDScreen):
             elevation=4
         )
 
-        # Content scroll
+        # Scrollable area
         scroll = MDScrollView()
         content = MDBoxLayout(
             orientation="vertical",
-            spacing="20dp",
+            spacing=dp(20),
             size_hint_y=None,
-            padding="20dp"
+            padding=dp(20)
         )
         content.bind(minimum_height=content.setter('height'))
 
-        # User welcome card
-        welcome_card = self.create_welcome_card(user)
-
-        # Quick actions
-        actions_card = self.create_quick_actions_card()
-
-        # Events section
-        events_section = self.create_events_section()
-
-        content.add_widget(welcome_card)
-        content.add_widget(actions_card)
-        content.add_widget(events_section)
+        # Add cards
+        content.add_widget(self.create_welcome_card(user))
+        content.add_widget(self.create_quick_actions_card())
+        content.add_widget(self.create_events_section())
 
         scroll.add_widget(content)
         main_layout.add_widget(toolbar)
         main_layout.add_widget(scroll)
-
         self.add_widget(main_layout)
 
-        # Load events from Excel
+        # Load events
         self.load_events()
 
+    # ------------------- UI COMPONENTS -------------------
+
     def create_welcome_card(self, user):
+        """Welcome banner card"""
         return MDCard(
             MDBoxLayout(
                 MDBoxLayout(
@@ -89,10 +87,10 @@ class Dashboard(MDScreen):
                     MDLabel(
                         text=f"📚 {user.department} • {user.year}\n🎯 Interests: {', '.join(user.interests)}",
                         theme_text_color="Custom",
-                        text_color=[1, 1, 1, 0.8]
+                        text_color=[1, 1, 1, 0.85]
                     ),
                     orientation="vertical",
-                    spacing="10dp",
+                    spacing=dp(8),
                     size_hint_x=0.7
                 ),
                 MDBoxLayout(
@@ -103,26 +101,22 @@ class Dashboard(MDScreen):
                     size_hint_x=0.3
                 ),
                 orientation="horizontal",
-                padding="25dp",
-                spacing="15dp"
+                padding=dp(25),
+                spacing=dp(15)
             ),
             size_hint_y=None,
-            height="120dp",
+            height=dp(120),
             elevation=6,
             md_bg_color=[0.1, 0.4, 0.9, 1],
             radius=[20]
         )
 
     def create_quick_actions_card(self):
-        actions_grid = MDGridLayout(
-            cols=3,
-            spacing="15dp",
-            size_hint_y=None,
-            height="100dp"
-        )
+        """Card with Browse, My Events, Settings"""
+        actions_grid = MDGridLayout(cols=3, spacing=dp(15), size_hint_y=None, height=dp(100))
 
         actions = [
-            ("📅", "Browse\nEvents", lambda x: self.browse_events()),
+            ("📅", "Browse\nEvents", lambda x: self.load_events()),
             ("👥", "My Events", lambda x: self.go_to_my_events()),
             ("⚙️", "Settings", lambda x: self.show_settings())
         ]
@@ -133,7 +127,7 @@ class Dashboard(MDScreen):
                     MDLabel(text=emoji, font_style="H4", halign="center"),
                     MDLabel(text=text, font_style="Caption", halign="center", theme_text_color="Primary"),
                     orientation="vertical",
-                    spacing="5dp"
+                    spacing=dp(5)
                 ),
                 elevation=3,
                 radius=[15],
@@ -147,25 +141,21 @@ class Dashboard(MDScreen):
                 MDLabel(text="⚡ Quick Actions", font_style="H6", theme_text_color="Primary", bold=True),
                 actions_grid,
                 orientation="vertical",
-                spacing="15dp",
-                padding="20dp"
+                spacing=dp(15),
+                padding=dp(20)
             ),
             size_hint_y=None,
-            height="180dp",
+            height=dp(180),
             elevation=4,
             radius=[15],
             md_bg_color=[0.98, 0.99, 1, 1]
         )
 
     def create_events_section(self):
-        layout = MDBoxLayout(
-            orientation="vertical",
-            spacing="15dp",
-            size_hint_y=None
-        )
+        """Container for all events"""
+        layout = MDBoxLayout(orientation="vertical", spacing=dp(15), size_hint_y=None)
         layout.bind(minimum_height=layout.setter('height'))
 
-        # Events header
         header = MDBoxLayout(
             MDLabel(
                 text="🎪 All Events",
@@ -180,58 +170,64 @@ class Dashboard(MDScreen):
                 color=[0.1, 0.4, 0.9, 1],
                 size_hint_x=0.3,
                 size_hint_y=None,
-                height="40dp",
+                height=dp(40),
                 on_release=self.load_events
             ),
             orientation="horizontal",
             size_hint_y=None,
-            height="40dp"
+            height=dp(40)
         )
 
-        # Events container
-        self.events_container = MDBoxLayout(
-            orientation="vertical",
-            spacing="10dp",
-            size_hint_y=None
-        )
+        # Event container
+        self.events_container = MDBoxLayout(orientation="vertical", spacing=dp(10), size_hint_y=None)
         self.events_container.bind(minimum_height=self.events_container.setter('height'))
 
         layout.add_widget(header)
         layout.add_widget(self.events_container)
-
         return layout
 
-    def load_events(self, *args):
-        """Always load only ACTIVE events from Excel"""
-        self.events_container.clear_widgets()
-        try:
-            events_df = pd.read_excel("events_database.xlsx", sheet_name="Events")
+    # ------------------- LOAD EVENTS -------------------
 
-            if len(events_df) == 0:
+    def load_events(self, *args):
+        """Load all events from Excel"""
+        self.events_container.clear_widgets()
+        excel_file = "events_database.xlsx"
+
+        if not os.path.exists(excel_file):
+            self.events_container.add_widget(
+                MDLabel(text="📭 No events file found. Ask admin to create events.", halign="center", theme_text_color="Secondary")
+            )
+            return
+
+        try:
+            events_df = pd.read_excel(excel_file, sheet_name="Events")
+
+            if events_df.empty:
                 self.events_container.add_widget(
                     MDLabel(text="📭 No events available.", halign="center", theme_text_color="Secondary")
                 )
-            else:
-                for _, event in events_df.iterrows():
-                    # Only display active events
-                    if str(event.get("Status", "Active")).lower() == "active":
-                        event_card = EventCard(event_data=event.to_dict())
-                        self.events_container.add_widget(event_card)
+                return
 
-                # Edge case: if none matched
-                if len(self.events_container.children) == 0:
-                    self.events_container.add_widget(
-                        MDLabel(text="📭 No active events at the moment.", halign="center", theme_text_color="Secondary")
-                    )
+            displayed = 0
+            for _, event in events_df.iterrows():
+                # Accept events with or without "Status" column
+                if "Status" not in events_df.columns or str(event.get("Status", "Active")).lower() == "active":
+                    event_data = event.to_dict()
+                    event_card = EventCard(event_data=event_data)
+                    self.events_container.add_widget(event_card)
+                    displayed += 1
+
+            if displayed == 0:
+                self.events_container.add_widget(
+                    MDLabel(text="📭 No active events right now.", halign="center", theme_text_color="Secondary")
+                )
 
         except Exception as e:
             self.events_container.add_widget(
                 MDLabel(text=f"⚠️ Error loading events: {e}", halign="center", theme_text_color="Error")
             )
 
-
-    def browse_events(self, *args):
-        self.load_events()
+    # ------------------- USER ACTIONS -------------------
 
     def go_to_my_events(self, *args):
         App.get_running_app().sm.current = 'my_events'

@@ -135,7 +135,7 @@ class AdminDashboard(MDScreen):
                                      f"👥 {ev.get('Registered_Count',0)}/{ev.get('Capacity','')} | 🏷️ {ev.get('Category','')}",
                                 font_style="Caption", theme_text_color="Secondary"
                             ),
-                            orientation="vertical", spacing=dp(8), size_hint_x=0.55
+                            orientation="vertical", spacing=dp(8), size_hint_x=0.45
                         ),
                         MDBoxLayout(
                             MDRaisedButton(
@@ -151,6 +151,12 @@ class AdminDashboard(MDScreen):
                                 on_release=lambda x, e=ev: self.show_registrations(e)
                             ),
                             MDRaisedButton(
+                                text="💬 Feedback",
+                                md_bg_color=[0.2, 0.5, 0.8, 1],
+                                text_color=[1, 1, 1, 1],
+                                on_release=lambda x, e=ev: self.show_feedbacks(e)
+                            ),
+                            MDRaisedButton(
                                 text="✏️ Edit",
                                 md_bg_color=[1, 0.76, 0.03, 1],  # Amber
                                 text_color=[0.2, 0.2, 0.2, 1],
@@ -162,7 +168,7 @@ class AdminDashboard(MDScreen):
                                 text_color=[1, 1, 1, 1],
                                 on_release=lambda x, e=ev: self.confirm_delete_event(e)
                             ),
-                            orientation="horizontal", spacing=dp(8), size_hint_x=0.45
+                            orientation="horizontal", spacing=dp(8), size_hint_x=0.55
                         ),
                         orientation="horizontal", spacing=dp(12), padding=dp(14)
                     ),
@@ -189,7 +195,8 @@ class AdminDashboard(MDScreen):
         main_layout.add_widget(toolbar)
         main_layout.add_widget(scroll)
         self.add_widget(main_layout)
-        # ---------------- CREATE / EDIT FORM ----------------
+
+    # ---------------- CREATE / EDIT FORM ----------------
     def load_event_form(self, event=None):
         self.clear_widgets()
         self.editing_event_id = event.get("Event_ID") if event else None
@@ -305,6 +312,48 @@ class AdminDashboard(MDScreen):
             )
             self.dialog.open()
 
+    # ---------------- VIEW FEEDBACKS ----------------
+    def show_feedbacks(self, event):
+        """Display all feedback for a specific event."""
+        try:
+            import pandas as pd
+            from utils.excel_db import ExcelUserDatabase
+
+            db = ExcelUserDatabase()
+            feedback_file = os.path.join(db.project_root, "event_feedbacks.xlsx")
+            feedback_sheet = "Feedbacks"
+
+            if not os.path.exists(feedback_file):
+                text = "📭 No feedback yet."
+            else:
+                df = pd.read_excel(feedback_file, sheet_name=feedback_sheet)
+                event_feedback = df[df["Event_ID"] == event["Event_ID"]]
+
+                if event_feedback.empty:
+                    text = "📭 No feedback yet."
+                else:
+                    lines = []
+                    for _, r in event_feedback.iterrows():
+                        lines.append(f"👤 {r['User_Name']} ⭐ {r['Rating']}/5\n{r['Feedback']}\n")
+                    text = "\n".join(lines)
+
+            self.dialog = MDDialog(
+                title=f"💬 Feedback - {event.get('Title','')}",
+                text=text,
+                buttons=[
+                    MDFlatButton(
+                        text="Close",
+                        theme_text_color="Custom",
+                        text_color=[0.26, 0.63, 0.79, 1],
+                        on_release=lambda x: self.dialog.dismiss()
+                    )
+                ]
+            )
+            self.dialog.open()
+
+        except Exception as e:
+            self.show_error(f"Failed to load feedback: {e}")
+
     # ---------------- EVENT DETAILS POPUP ----------------
     def show_event_details(self, event):
         """Display detailed information about the selected event in a popup."""
@@ -359,6 +408,7 @@ class AdminDashboard(MDScreen):
                 ]
             )
             self.dialog.open()
+
     # ---------------- DELETE EVENT ----------------
     def confirm_delete_event(self, event):
         """Ask for confirmation before deleting an event."""
@@ -409,7 +459,6 @@ class AdminDashboard(MDScreen):
         except Exception as e:
             self.show_error(f"❌ Delete failed: {e}")
 
-
     # ---------------- Build Event Form ----------------
     def _build_event_form(self):
         form_layout = MDBoxLayout(orientation="vertical", spacing=dp(16),
@@ -489,7 +538,6 @@ class AdminDashboard(MDScreen):
         )
         form_layout.add_widget(self.description_field)
 
-        # Capacity + Organizer row
         # Capacity, Organizer, and Contact row
         row = MDBoxLayout(spacing=dp(12), size_hint_y=None, height=dp(56))
 
@@ -513,7 +561,6 @@ class AdminDashboard(MDScreen):
         row.add_widget(self.organizer_field)
         row.add_widget(self.contact_field)
         form_layout.add_widget(row)
-
 
         # Poster
         form_layout.add_widget(self._create_poster_upload_section())
@@ -615,274 +662,7 @@ class AdminDashboard(MDScreen):
         box.add_widget(row)
         box.add_widget(self.date_display)
         return box
-        # ---------------- CREATE / EDIT FORM ----------------
-    def load_event_form(self, event=None):
-        self.clear_widgets()
-        self.editing_event_id = event.get("Event_ID") if event else None
 
-        if not event:
-            self.selected_day = self.selected_month = self.selected_year = None
-            self.selected_poster_path = None
-
-        main_layout = MDBoxLayout(orientation="vertical")
-
-        toolbar = MDTopAppBar(
-            title="✏️ Edit Event" if event else "📝 Create Event",
-            left_action_items=[["arrow-left", lambda x: self.load_dashboard()]],
-            md_bg_color=[0.30, 0.69, 0.31, 1] if not event else [1, 0.76, 0.03, 1],
-            elevation=6
-        )
-
-        scroll = MDScrollView()
-        content = MDBoxLayout(orientation="vertical", spacing=dp(16),
-                              size_hint_y=None, padding=dp(16))
-        content.bind(minimum_height=content.setter("height"))
-
-        form_card = self._build_event_form()
-
-        if event:
-            try:
-                self.title_field.text = str(event.get("Title", ""))
-                self.category_field.text = str(event.get("Category", ""))
-                self.time_field.text = str(event.get("Time", ""))
-                self.venue_field.text = str(event.get("Venue", ""))
-                self.description_field.text = str(event.get("Description", ""))
-                self.capacity_field.text = str(event.get("Capacity", ""))
-                self.organizer_field.text = str(event.get("Organizer", ""))
-                poster_path = event.get("Poster_Path")
-                if poster_path:
-                    self.selected_poster_path = poster_path
-                    self.poster_status.text = f"✅ {os.path.basename(poster_path)}"
-                    self.poster_status.theme_text_color = "Custom"
-                    self.poster_status.text_color = [0.30, 0.69, 0.31, 1]
-                date_val = str(event.get("Date", ""))
-                if date_val and "-" in date_val:
-                    parts = date_val.split("-")
-                    if len(parts) == 3:
-                        self.selected_year = int(parts[0])
-                        self.selected_month = int(parts[1])
-                        self.selected_day = int(parts[2])
-                        self.year_field.text = str(self.selected_year)
-                        months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-                        self.month_field.text = months[self.selected_month - 1]
-                        self.day_field.text = f"{self.selected_day:02d}"
-                        self._update_date_display()
-            except Exception:
-                pass
-
-        content.add_widget(form_card)
-        scroll.add_widget(content)
-
-        main_layout.add_widget(toolbar)
-        main_layout.add_widget(scroll)
-        self.add_widget(main_layout)
-
-    # ---------------- Build Event Form ----------------
-    def _build_event_form(self):
-        form_layout = MDBoxLayout(orientation="vertical", spacing=dp(16),
-                                  size_hint_y=None, adaptive_height=True)
-
-        # Title
-        self.title_field = MDTextField(
-            hint_text="Event Title", 
-            mode="rectangle",
-            size_hint_y=None, height=dp(56),
-            line_color_focus=[0.16, 0.50, 0.73, 1],
-            hint_text_color_focus=[0.16, 0.50, 0.73, 1]
-        )
-        form_layout.add_widget(self.title_field)
-
-        # Category Section
-        cat_box = MDBoxLayout(orientation="vertical", spacing=dp(6),
-                              size_hint_y=None, height=dp(95))
-        cat_label = MDLabel(
-            text="🏷️ Category", font_style="Subtitle2", bold=True,
-            size_hint_y=None, height=dp(30), halign="left",
-            theme_text_color="Custom", text_color=[0.26, 0.63, 0.79, 1]
-        )
-        cat_box.add_widget(cat_label)
-        self.category_field = MDTextField(
-            hint_text="Enter or Select Category", mode="rectangle",
-            size_hint_y=None, height=dp(56),
-            line_color_focus=[0.26, 0.63, 0.79, 1]
-        )
-        categories = ["Technical", "Cultural", "Sports", "Workshop", "Seminar",
-                      "Placement", "Social", "Clubs", "Competitions", "Academic"]
-        category_items = [{"viewclass": "OneLineListItem", "text": c,
-                           "on_release": lambda x=c: self.select_category(x)}
-                          for c in categories]
-        self.category_menu = MDDropdownMenu(
-            caller=self.category_field, items=category_items, width_mult=4
-        )
-        self.category_field.bind(
-            on_focus=lambda i, f: self.category_menu.open() if f else None
-        )
-        cat_box.add_widget(self.category_field)
-        form_layout.add_widget(cat_box)
-
-        # Date Section
-        date_box = MDBoxLayout(orientation="vertical", spacing=dp(6),
-                               size_hint_y=None, height=dp(105))
-        date_label = MDLabel(
-            text="📅 Select Event Date", font_style="Subtitle2", bold=True,
-            size_hint_y=None, height=dp(30), halign="left",
-            theme_text_color="Custom", text_color=[0.40, 0.73, 0.42, 1]
-        )
-        date_box.add_widget(date_label)
-        date_box.add_widget(self._create_date_picker_box())
-        form_layout.add_widget(date_box)
-
-        # Time
-        self.time_field = MDTextField(
-            hint_text="Event Time (HH:MM)", mode="rectangle",
-            size_hint_y=None, height=dp(56),
-            line_color_focus=[0.40, 0.73, 0.42, 1]
-        )
-        form_layout.add_widget(self.time_field)
-
-        # Venue
-        self.venue_field = MDTextField(
-            hint_text="Venue", mode="rectangle",
-            size_hint_y=None, height=dp(56),
-            line_color_focus=[1, 0.76, 0.03, 1]
-        )
-        form_layout.add_widget(self.venue_field)
-
-        # Description
-        self.description_field = MDTextField(
-            hint_text="Event Description", mode="rectangle", multiline=True,
-            size_hint_y=None, height=dp(100),
-            line_color_focus=[0.16, 0.50, 0.73, 1]
-        )
-        form_layout.add_widget(self.description_field)
-
-        # Capacity + Organizer row
-        # Capacity, Organizer, and Contact row
-        row = MDBoxLayout(spacing=dp(12), size_hint_y=None, height=dp(56))
-
-        self.capacity_field = MDTextField(
-            hint_text="Capacity",
-            mode="rectangle",
-            line_color_focus=[0.96, 0.26, 0.21, 1]
-        )
-        self.organizer_field = MDTextField(
-            hint_text="Organizer Name",
-            mode="rectangle",
-            line_color_focus=[0.26, 0.63, 0.79, 1]
-        )
-        self.contact_field = MDTextField(
-            hint_text="Organizer Contact (Phone/Email)",
-            mode="rectangle",
-            line_color_focus=[0.40, 0.73, 0.42, 1]
-        )
-
-        row.add_widget(self.capacity_field)
-        row.add_widget(self.organizer_field)
-        row.add_widget(self.contact_field)
-        form_layout.add_widget(row)
-
-
-        # Poster
-        form_layout.add_widget(self._create_poster_upload_section())
-
-        # Save Button
-        save_btn = MDRaisedButton(
-            text="✅ Save Event",
-            md_bg_color=[0.30, 0.69, 0.31, 1],
-            text_color=[1, 1, 1, 1],
-            size_hint_y=None, height=dp(56),
-            font_style="Button", elevation=4,
-            on_release=self.create_event
-        )
-        form_layout.add_widget(save_btn)
-
-        return MDCard(
-            form_layout, padding=dp(16),
-            md_bg_color=[0.98, 0.99, 1, 1],
-            radius=[15], size_hint_y=None, adaptive_height=True,
-            elevation=4
-        )
-
-    def select_category(self, cat):
-        self.category_field.text = cat
-        if self.category_menu:
-            self.category_menu.dismiss()
-
-    # ---------------- Date picker ----------------
-    def _create_date_picker_box(self):
-        row = MDBoxLayout(spacing=dp(10), size_hint_y=None, height=dp(60))
-
-        self.day_field = MDTextField(
-            hint_text="Day", mode="rectangle", readonly=True,
-            size_hint=(None, None), size=(dp(80), dp(56)),
-            line_color_focus=[0.40, 0.73, 0.42, 1]
-        )
-        day_layout = MDRelativeLayout(size_hint=(None, None), size=(dp(80), dp(56)))
-        day_layout.add_widget(self.day_field)
-        day_btn = MDIconButton(
-            icon="menu-down", pos_hint={"center_y": 0.5, "right": 1},
-            theme_text_color="Custom", text_color=[0.40, 0.73, 0.42, 1],
-            on_release=lambda x: self._open_day_menu()
-        )
-        day_layout.add_widget(day_btn)
-
-        self.month_field = MDTextField(
-            hint_text="Month", mode="rectangle", readonly=True,
-            size_hint=(None, None), size=(dp(110), dp(56)),
-            line_color_focus=[0.40, 0.73, 0.42, 1]
-        )
-        months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        month_items = [{"viewclass": "OneLineListItem", "text": m,
-                        "on_release": lambda x=i+1: self.select_month(x)}
-                       for i, m in enumerate(months)]
-        self.month_menu = MDDropdownMenu(
-            caller=self.month_field, items=month_items, width_mult=4
-        )
-        month_layout = MDRelativeLayout(size_hint=(None, None), size=(dp(110), dp(56)))
-        month_layout.add_widget(self.month_field)
-        month_btn = MDIconButton(
-            icon="menu-down", pos_hint={"center_y": 0.5, "right": 1},
-            theme_text_color="Custom", text_color=[0.40, 0.73, 0.42, 1],
-            on_release=lambda x: self.month_menu.open()
-        )
-        month_layout.add_widget(month_btn)
-
-        self.year_field = MDTextField(
-            hint_text="Year", mode="rectangle", readonly=True,
-            size_hint=(None, None), size=(dp(90), dp(56)),
-            line_color_focus=[0.40, 0.73, 0.42, 1]
-        )
-        this_year = datetime.now().year
-        year_items = [{"viewclass": "OneLineListItem", "text": str(y),
-                       "on_release": lambda x=y: self.select_year(x)}
-                      for y in range(this_year, this_year + 6)]
-        self.year_menu = MDDropdownMenu(
-            caller=self.year_field, items=year_items, width_mult=3
-        )
-        year_layout = MDRelativeLayout(size_hint=(None, None), size=(dp(90), dp(56)))
-        year_layout.add_widget(self.year_field)
-        year_btn = MDIconButton(
-            icon="menu-down", pos_hint={"center_y": 0.5, "right": 1},
-            theme_text_color="Custom", text_color=[0.40, 0.73, 0.42, 1],
-            on_release=lambda x: self.year_menu.open()
-        )
-        year_layout.add_widget(year_btn)
-
-        row.add_widget(day_layout)
-        row.add_widget(month_layout)
-        row.add_widget(year_layout)
-
-        self.date_display = MDLabel(
-            text="No date selected", font_style="Caption", halign="center",
-            theme_text_color="Secondary", size_hint_y=None, height=dp(28)
-        )
-
-        box = MDBoxLayout(orientation="vertical", spacing=dp(8))
-        box.add_widget(row)
-        box.add_widget(self.date_display)
-        return box
     def _open_day_menu(self):
         today = datetime.now()
         year = self.selected_year or today.year
@@ -1000,7 +780,7 @@ class AdminDashboard(MDScreen):
 
         if self.editing_event_id:
             try:
-                events_df = pd.read_excel(db.events_file, sheet_name=db.events_sheet)  # ✅ fixed
+                events_df = pd.read_excel(db.events_file, sheet_name=db.events_sheet)
                 idx = events_df[events_df["Event_ID"] == self.editing_event_id].index
                 if not idx.empty:
                     row_idx = idx[0]
@@ -1024,17 +804,17 @@ class AdminDashboard(MDScreen):
         else:
             try:
                 success, event_id = db.create_event(
-                title=self.title_field.text.strip(),
-                category=self.category_field.text.strip(),
-                date=self._get_formatted_date(),
-                time=self.time_field.text.strip(),
-                venue=self.venue_field.text.strip(),
-                description=self.description_field.text.strip(),
-                organizer=self.organizer_field.text.strip(),
-                organizer_contact=self.contact_field.text.strip(),
-                capacity=self.capacity_field.text.strip(),
-                poster_path=poster_path
-            )
+                    title=self.title_field.text.strip(),
+                    category=self.category_field.text.strip(),
+                    date=self._get_formatted_date(),
+                    time=self.time_field.text.strip(),
+                    venue=self.venue_field.text.strip(),
+                    description=self.description_field.text.strip(),
+                    organizer=self.organizer_field.text.strip(),
+                    organizer_contact=self.contact_field.text.strip(),
+                    capacity=self.capacity_field.text.strip(),
+                    poster_path=poster_path
+                )
 
                 if success:
                     self.show_success(f"Event created ✅\nEvent ID: {event_id}")
@@ -1047,7 +827,8 @@ class AdminDashboard(MDScreen):
 
         self.editing_event_id = None
         self.load_dashboard()
-        # ---------------- Validation & Helpers ----------------
+
+    # ---------------- Validation & Helpers ----------------
     def _validate_form_fields(self):
         if not self.title_field.text.strip():
             self.show_error("Enter event title")
