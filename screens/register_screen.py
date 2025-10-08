@@ -11,6 +11,7 @@ from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.selectioncontrol import MDCheckbox
 from kivy.app import App
 from kivy.clock import Clock
+from kivymd.uix.button import MDIconButton
 
 class RegisterScreen(MDScreen):
     def __init__(self, **kwargs):
@@ -22,18 +23,18 @@ class RegisterScreen(MDScreen):
 
     def on_enter(self):
         self.clear_widgets()
-        self.md_bg_color = [0.98, 0.99, 1, 1]
+        self.md_bg_color = [0.96, 0.97, 0.99, 1]
         
         # Main layout
         main_layout = MDBoxLayout(orientation="vertical")
         
-        # Premium Top App Bar
+        # Premium Top App Bar with gradient effect
         toolbar = MDTopAppBar(
             title="🎓 Student Registration",
             left_action_items=[["arrow-left", lambda x: self.go_back()]],
             right_action_items=[["help-circle", lambda x: self.show_help()]],
-            elevation=4,
-            md_bg_color=[0.1, 0.3, 0.8, 1]
+            elevation=8,
+            md_bg_color=[0.11, 0.35, 0.85, 1]
         )
         
         # Progress indicator
@@ -43,9 +44,9 @@ class RegisterScreen(MDScreen):
         scroll = MDScrollView()
         content = MDBoxLayout(
             orientation="vertical",
-            spacing="25dp",
+            spacing="18dp",
             size_hint_y=None,
-            padding="20dp"
+            padding=["16dp", "8dp", "16dp", "16dp"]
         )
         content.bind(minimum_height=content.setter('height'))
         
@@ -74,21 +75,32 @@ class RegisterScreen(MDScreen):
         self.add_widget(main_layout)
     
     def create_progress_indicator(self):
-        """Create progress indicator"""
+        """Create beautiful progress indicator"""
+        container = MDBoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            height="85dp",
+            padding=["20dp", "12dp", "20dp", "8dp"]
+        )
+        
+        # Progress bar with steps
         progress_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="15dp",
-            padding="20dp"
+            spacing="8dp",
+            size_hint_y=None,
+            height="48dp"
         )
         
         # Step indicators
         for i in range(1, self.total_steps + 1):
             if i <= self.step:
-                color = [0.1, 0.8, 0.3, 1]
+                bg_color = [0.13, 0.75, 0.35, 1]
                 text_color = [1, 1, 1, 1]
+                elevation = 6
             else:
-                color = [0.9, 0.9, 0.9, 1]
-                text_color = [0.6, 0.6, 0.6, 1]
+                bg_color = [0.88, 0.88, 0.88, 1]
+                text_color = [0.55, 0.55, 0.55, 1]
+                elevation = 2
             
             step_card = MDCard(
                 MDLabel(
@@ -97,80 +109,103 @@ class RegisterScreen(MDScreen):
                     theme_text_color="Custom",
                     text_color=text_color,
                     halign="center",
+                    valign="center",
                     bold=True
                 ),
                 size_hint=(None, None),
-                size=("40dp", "40dp"),
-                md_bg_color=color,
-                radius=[20],
-                elevation=3 if i <= self.step else 1
+                size=("48dp", "48dp"),
+                md_bg_color=bg_color,
+                radius=[24],
+                elevation=elevation
             )
             progress_layout.add_widget(step_card)
             
-            # Add connector line (except for last step)
+            # Add connector line
             if i < self.total_steps:
+                line_color = [0.13, 0.75, 0.35, 1] if i < self.step else [0.88, 0.88, 0.88, 1]
                 connector = MDLabel(
-                    text="━━━",
+                    text="━",
                     theme_text_color="Custom",
-                    text_color=[0.1, 0.8, 0.3, 1] if i < self.step else [0.9, 0.9, 0.9, 1],
-                    size_hint_x=0.3
+                    text_color=line_color,
+                    size_hint_x=0.15,
+                    halign="center",
+                    valign="center",
+                    font_size="18sp"
                 )
                 progress_layout.add_widget(connector)
         
+        container.add_widget(progress_layout)
+        
         # Progress text
         progress_text = MDLabel(
-            text=f"Step {self.step} of {self.total_steps} • {int((self.step/self.total_steps)*100)}% Complete",
+            text=f"Step {self.step} of {self.total_steps}  •  {int((self.step/self.total_steps)*100)}% Complete",
             font_style="Caption",
             theme_text_color="Secondary",
-            halign="right"
+            halign="center",
+            size_hint_y=None,
+            height="22dp"
         )
-        progress_layout.add_widget(progress_text)
+        container.add_widget(progress_text)
         
         return MDCard(
-            progress_layout,
+            container,
             size_hint_y=None,
-            height="80dp",
-            elevation=2,
-            radius=[0, 0, 15, 15],
+            height="85dp",
+            elevation=3,
+            radius=[0, 0, 18, 18],
             md_bg_color=[1, 1, 1, 1]
         )
     
     def create_hero_section(self):
-        """Create hero section"""
+        """Create beautiful hero section"""
         step_info = {
-            1: ("👋 Welcome to Event Aggregator", "Join thousands of students discovering amazing campus events.\nLet's start with your basic information."),
-            2: ("🎯 Choose Your Interests", "Select your interests to receive personalized event recommendations\ntailored just for you."),
-            3: ("🔐 Secure Your Account", "Set up your secure login credentials and complete\nyour registration process.")
+            1: ("👋 Welcome!", "Let's get started with your basic information"),
+            2: ("🎯 Your Interests", "Select categories to personalize your experience"),
+            3: ("🔐 Almost Done", "Create your secure account credentials")
         }
         
         title, desc = step_info[self.step]
         
-        return MDCard(
-            MDBoxLayout(
-                MDLabel(
-                    text=title,
-                    font_style="H4",
-                    theme_text_color="Custom",
-                    text_color=[1, 1, 1, 1],
-                    halign="center",
-                    bold=True
-                ),
-                MDLabel(
-                    text=desc,
-                    font_style="Body1",
-                    theme_text_color="Custom",
-                    text_color=[1, 1, 1, 0.9],
-                    halign="center"
-                ),
-                orientation="vertical",
-                spacing="15dp",
-                padding="30dp"
-            ),
+        hero_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing="8dp",
+            padding=["24dp", "18dp", "24dp", "18dp"],
             size_hint_y=None,
-            height="140dp",
+            height="110dp"
+        )
+        
+        hero_layout.add_widget(
+            MDLabel(
+                text=title,
+                font_style="H4",
+                theme_text_color="Custom",
+                text_color=[1, 1, 1, 1],
+                halign="center",
+                bold=True,
+                size_hint_y=None,
+                height="40dp"
+            )
+        )
+        
+        hero_layout.add_widget(
+            MDLabel(
+                text=desc,
+                font_style="Body1",
+                theme_text_color="Custom",
+                text_color=[1, 1, 1, 0.92],
+                halign="center",
+                size_hint_y=None,
+                height="32dp"
+            )
+        )
+        
+        return MDCard(
+            hero_layout,
+            size_hint_y=None,
+            height="110dp",
             elevation=8,
-            radius=[25],
-            md_bg_color=[0.1, 0.4, 0.9, 1]
+            radius=[22],
+            md_bg_color=[0.11, 0.42, 0.92, 1]
         )
     
     def create_current_step_form(self):
@@ -186,9 +221,11 @@ class RegisterScreen(MDScreen):
         """Step 1: Personal Information Form"""
         form_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="20dp",
-            padding="30dp"
+            spacing="14dp",
+            padding=["24dp", "20dp", "24dp", "20dp"],
+            size_hint_y=None
         )
+        form_layout.bind(minimum_height=form_layout.setter('height'))
         
         # Form title
         form_layout.add_widget(
@@ -198,7 +235,7 @@ class RegisterScreen(MDScreen):
                 theme_text_color="Primary",
                 bold=True,
                 size_hint_y=None,
-                height="40dp"
+                height="32dp"
             )
         )
         
@@ -225,19 +262,21 @@ class RegisterScreen(MDScreen):
         return MDCard(
             form_layout,
             size_hint_y=None,
-            height="450dp",
-            elevation=6,
+            height="470dp",
+            elevation=5,
             radius=[20],
             md_bg_color=[1, 1, 1, 1]
         )
     
     def create_step2_interests(self):
-        """Step 2: Interest Selection"""
+        """Step 2: Beautiful Interest Selection"""
         form_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="20dp",
-            padding="30dp"
+            spacing="16dp",
+            padding=["24dp", "20dp", "24dp", "20dp"],
+            size_hint_y=None
         )
+        form_layout.bind(minimum_height=form_layout.setter('height'))
         
         # Title
         form_layout.add_widget(
@@ -245,16 +284,20 @@ class RegisterScreen(MDScreen):
                 text="🎯 Select Your Interests",
                 font_style="H6",
                 theme_text_color="Primary",
-                bold=True
+                bold=True,
+                size_hint_y=None,
+                height="32dp"
             )
         )
         
         # Description
         form_layout.add_widget(
             MDLabel(
-                text="Choose categories you're interested in to receive personalized event recommendations:",
+                text="Tap to select categories you're interested in:",
                 font_style="Body2",
-                theme_text_color="Secondary"
+                theme_text_color="Secondary",
+                size_hint_y=None,
+                height="28dp"
             )
         )
         
@@ -262,21 +305,31 @@ class RegisterScreen(MDScreen):
         interests_grid = self.create_interests_grid()
         form_layout.add_widget(interests_grid)
         
-        # Selection count
-        form_layout.add_widget(
+        # Selection count with beautiful styling
+        count_card = MDCard(
             MDLabel(
-                text=f"✅ Selected: {len(self.selected_interests)} interests",
-                font_style="Caption",
-                theme_text_color="Primary",
-                halign="center"
-            )
+                text=f"✅ {len(self.selected_interests)} interests selected",
+                font_style="Subtitle2",
+                theme_text_color="Custom",
+                text_color=[0.13, 0.75, 0.35, 1],
+                halign="center",
+                valign="center",
+                bold=True
+            ),
+            size_hint_y=None,
+            height="42dp",
+            md_bg_color=[0.9, 0.98, 0.9, 1],
+            radius=[12],
+            elevation=2,
+            padding="10dp"
         )
+        form_layout.add_widget(count_card)
         
         return MDCard(
             form_layout,
             size_hint_y=None,
-            height="450dp",
-            elevation=6,
+            height="590dp",
+            elevation=5,
             radius=[20],
             md_bg_color=[1, 1, 1, 1]
         )
@@ -285,9 +338,11 @@ class RegisterScreen(MDScreen):
         """Step 3: Account Credentials"""
         form_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="20dp",
-            padding="30dp"
+            spacing="14dp",
+            padding=["24dp", "20dp", "24dp", "20dp"],
+            size_hint_y=None
         )
+        form_layout.bind(minimum_height=form_layout.setter('height'))
         
         # Title
         form_layout.add_widget(
@@ -295,21 +350,25 @@ class RegisterScreen(MDScreen):
                 text="🔐 Secure Your Account",
                 font_style="H6",
                 theme_text_color="Primary",
-                bold=True
+                bold=True,
+                size_hint_y=None,
+                height="32dp"
             )
         )
         
         # Description
         form_layout.add_widget(
             MDLabel(
-                text="Create secure login credentials for your account:",
+                text="Create secure login credentials:",
                 font_style="Body2",
-                theme_text_color="Secondary"
+                theme_text_color="Secondary",
+                size_hint_y=None,
+                height="26dp"
             )
         )
         
         # Password field
-        self.password_field = self.create_simple_textfield("Password", "Enter secure password", password=True)
+        self.password_field = self.create_simple_textfield("Password", "Minimum 6 characters", password=True)
         form_layout.add_widget(self.password_field)
         
         # Confirm password field
@@ -319,14 +378,15 @@ class RegisterScreen(MDScreen):
         # Terms checkbox
         terms_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="10dp",
+            spacing="12dp",
             size_hint_y=None,
-            height="40dp"
+            height="48dp",
+            padding=["4dp", "8dp", "4dp", "8dp"]
         )
         
         self.terms_checkbox = MDCheckbox(
-            size_hint_x=None,
-            width="30dp",
+            size_hint=(None, None),
+            size=("32dp", "32dp"),
             active=False
         )
         
@@ -340,83 +400,142 @@ class RegisterScreen(MDScreen):
         terms_layout.add_widget(terms_label)
         form_layout.add_widget(terms_layout)
         
-        # Account summary
-        summary_card = MDCard(
-            MDLabel(
-                text="📋 Account Benefits:\n• Personalized event recommendations\n• 48-hour event reminders\n• Easy registration management\n• Secure data protection",
-                font_style="Body2",
-                theme_text_color="Secondary"
-            ),
+        # Beautiful benefits card
+        benefits_layout = MDBoxLayout(
+            orientation="vertical",
+            padding=["16dp", "14dp", "16dp", "14dp"],
+            spacing="6dp",
             size_hint_y=None,
-            height="100dp",
-            md_bg_color=[0.95, 1, 0.95, 1],
-            radius=[10],
-            elevation=1,
-            padding="15dp"
+            height="115dp"
         )
-        form_layout.add_widget(summary_card)
+        
+        benefits_layout.add_widget(
+            MDLabel(
+                text="🎉 Account Benefits",
+                font_style="Subtitle1",
+                theme_text_color="Custom",
+                text_color=[0.11, 0.42, 0.92, 1],
+                bold=True,
+                size_hint_y=None,
+                height="28dp"
+            )
+        )
+        
+        benefits_text = MDLabel(
+            text="• Personalized event recommendations\n• 48-hour event reminders\n• Easy registration management\n• Secure data protection",
+            font_style="Caption",
+            theme_text_color="Secondary",
+            size_hint_y=None,
+            height="68dp"
+        )
+        benefits_layout.add_widget(benefits_text)
+        
+        benefits_card = MDCard(
+            benefits_layout,
+            size_hint_y=None,
+            height="115dp",
+            md_bg_color=[0.95, 0.97, 1, 1],
+            radius=[14],
+            elevation=2
+        )
+        form_layout.add_widget(benefits_card)
         
         return MDCard(
             form_layout,
             size_hint_y=None,
-            height="480dp",
-            elevation=6,
+            height="490dp",
+            elevation=5,
             radius=[20],
             md_bg_color=[1, 1, 1, 1]
         )
     
     def create_simple_textfield(self, hint, helper, password=False):
-        """Create simple KivyMD compatible text field"""
+        """Create beautiful text field"""
         return MDTextField(
             hint_text=hint,
             helper_text=helper,
             helper_text_mode="persistent",
             mode="rectangle",
-            line_color_focus=[0.1, 0.4, 0.9, 1],
+            line_color_focus=[0.11, 0.42, 0.92, 1],
             size_hint_y=None,
-            height="70dp",
+            height="72dp",
             password=password
         )
     
     def create_interests_grid(self):
-        """Create interests selection grid"""
+        """Create beautiful interests grid"""
         interests = [
-            ("💻", "Technical"), ("🎭", "Cultural"), 
-            ("⚽", "Sports"), ("💼", "Placement"),
-            ("🤝", "Social"), ("🎯", "Clubs"),
-            ("🏆", "Competitions"), ("📚", "Academic")
+            ("laptop", "Technical", [0.2, 0.6, 1, 1]), 
+            ("drama-masks", "Cultural", [1, 0.4, 0.6, 1]), 
+            ("soccer", "Sports", [0.2, 0.8, 0.2, 1]), 
+            ("briefcase", "Placement", [0.9, 0.5, 0.1, 1]),
+            ("account-group", "Social", [0.4, 0.4, 1, 1]), 
+            ("bullseye-arrow", "Clubs", [1, 0.3, 0.3, 1]),
+            ("trophy", "Competitions", [1, 0.7, 0, 1]), 
+            ("book-open-variant", "Academic", [0.3, 0.7, 0.9, 1])
         ]
         
         grid = MDGridLayout(
             cols=2,
-            spacing="15dp",
+            spacing="14dp",
             size_hint_y=None,
-            height="200dp"
+            height="370dp",
+            padding=["2dp", "8dp", "2dp", "8dp"]
         )
         
-        for emoji, interest in interests:
-            interest_card = self.create_interest_card(emoji, interest)
+        for icon, interest, color in interests:
+            interest_card = self.create_interest_card(icon, interest, color)
             grid.add_widget(interest_card)
         
         return grid
     
-    def create_interest_card(self, emoji, interest):
-        """Create interest selection card"""
+    def create_interest_card(self, icon, interest, icon_color):
+        """Create beautiful interest card with animation effect"""
         is_selected = interest in self.selected_interests
         
-        card = MDCard(
-            MDBoxLayout(
-                MDLabel(text=emoji, font_style="H4", halign="center"),
-                MDLabel(text=interest, font_style="Subtitle1", halign="center", bold=True),
-                orientation="vertical",
-                spacing="5dp",
-                padding="15dp"
-            ),
+        card_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing="4dp",
+            padding=["12dp", "12dp", "12dp", "12dp"]
+        )
+        
+        # Icon button with proper Material Design Icons
+        icon_btn = MDIconButton(
+            icon=icon,
+            icon_size="42sp",
+            theme_icon_color="Custom",
+            icon_color=icon_color if not is_selected else [0.13, 0.75, 0.35, 1],
+            pos_hint={"center_x": 0.5},
+            disabled=True
+        )
+        card_layout.add_widget(icon_btn)
+        
+        # Interest name
+        interest_label = MDLabel(
+            text=interest,
+            font_style="Subtitle1",
+            halign="center",
+            valign="center",
+            bold=True,
             size_hint_y=None,
-            height="80dp",
-            elevation=6 if is_selected else 2,
-            radius=[15],
-            md_bg_color=[0.9, 1, 0.9, 1] if is_selected else [1, 1, 1, 1],
+            height="28dp"
+        )
+        card_layout.add_widget(interest_label)
+        
+        if is_selected:
+            bg_color = [0.88, 0.98, 0.88, 1]
+            elevation = 8
+        else:
+            bg_color = [1, 1, 1, 1]
+            elevation = 3
+        
+        card = MDCard(
+            card_layout,
+            size_hint_y=None,
+            height="95dp",
+            elevation=elevation,
+            radius=[14],
+            md_bg_color=bg_color,
             on_release=lambda x, i=interest: self.toggle_interest(i)
         )
         
@@ -433,36 +552,41 @@ class RegisterScreen(MDScreen):
         self.on_enter()
     
     def create_navigation_buttons(self):
-        """Create navigation buttons"""
+        """Create beautiful navigation buttons"""
         buttons_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="15dp",
-            padding="20dp"
+            spacing="14dp",
+            padding=["20dp", "16dp", "20dp", "16dp"],
+            size_hint_y=None,
+            height="90dp"
         )
         
         # Previous button (if not first step)
         if self.step > 1:
             prev_btn = Button(
-                text="⬅️ Previous",
-                size_hint_x=0.3,
-                height="50dp",
-                background_color=[0.7, 0.7, 0.7, 1],
+                text="⬅  Previous",
+                size_hint_x=0.38,
+                size_hint_y=None,
+                height="58dp",
+                background_color=[0.45, 0.45, 0.45, 1],
                 color=[1, 1, 1, 1],
-                font_size="14sp",
+                font_size="15sp",
+                bold=True,
                 on_release=self.previous_step
             )
             buttons_layout.add_widget(prev_btn)
         else:
             # Spacer
-            buttons_layout.add_widget(MDLabel(size_hint_x=0.3))
+            buttons_layout.add_widget(MDLabel(size_hint_x=0.38))
         
         # Next/Register button
         if self.step < self.total_steps:
             next_btn = Button(
-                text="Next Step ➡️",
-                size_hint_x=0.7,
-                height="50dp",
-                background_color=[0.1, 0.4, 0.9, 1],
+                text="Next Step  ➡",
+                size_hint_x=0.62,
+                size_hint_y=None,
+                height="58dp",
+                background_color=[0.11, 0.42, 0.92, 1],
                 color=[1, 1, 1, 1],
                 font_size="16sp",
                 bold=True,
@@ -470,10 +594,11 @@ class RegisterScreen(MDScreen):
             )
         else:
             next_btn = Button(
-                text="🎉 Create Account",
-                size_hint_x=0.7,
-                height="50dp",
-                background_color=[0.1, 0.8, 0.3, 1],
+                text="🎉  Create Account",
+                size_hint_x=0.62,
+                size_hint_y=None,
+                height="58dp",
+                background_color=[0.13, 0.75, 0.35, 1],
                 color=[1, 1, 1, 1],
                 font_size="16sp",
                 bold=True,
@@ -486,37 +611,52 @@ class RegisterScreen(MDScreen):
             buttons_layout,
             size_hint_y=None,
             height="90dp",
-            elevation=4,
+            elevation=6,
             radius=[20],
             md_bg_color=[1, 1, 1, 1]
         )
     
     def create_footer_section(self):
-        """Create footer section"""
-        return MDCard(
-            MDBoxLayout(
-                MDLabel(
-                    text="🛡️ Your data is secure and encrypted",
-                    font_style="Caption",
-                    theme_text_color="Primary",
-                    halign="center",
-                    bold=True
-                ),
-                MDLabel(
-                    text="All information is stored securely in Excel databases.\nNeed help? Contact: support@college.edu",
-                    font_style="Caption",
-                    theme_text_color="Secondary",
-                    halign="center"
-                ),
-                orientation="vertical",
-                spacing="8dp",
-                padding="20dp"
-            ),
+        """Create beautiful footer"""
+        footer_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing="6dp",
+            padding=["20dp", "14dp", "20dp", "14dp"],
             size_hint_y=None,
-            height="80dp",
-            elevation=1,
-            radius=[15],
-            md_bg_color=[0.98, 0.99, 1, 1]
+            height="78dp"
+        )
+        
+        footer_layout.add_widget(
+            MDLabel(
+                text="🛡️  Your data is secure and encrypted",
+                font_style="Caption",
+                theme_text_color="Custom",
+                text_color=[0.13, 0.75, 0.35, 1],
+                halign="center",
+                bold=True,
+                size_hint_y=None,
+                height="22dp"
+            )
+        )
+        
+        footer_layout.add_widget(
+            MDLabel(
+                text="Secured with industry-standard encryption\nNeed help? Contact: support@college.edu",
+                font_style="Caption",
+                theme_text_color="Secondary",
+                halign="center",
+                size_hint_y=None,
+                height="34dp"
+            )
+        )
+        
+        return MDCard(
+            footer_layout,
+            size_hint_y=None,
+            height="78dp",
+            elevation=2,
+            radius=[16],
+            md_bg_color=[0.97, 0.98, 0.99, 1]
         )
     
     def next_step(self, *args):
